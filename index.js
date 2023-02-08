@@ -1,11 +1,13 @@
 const express = require("express");
+const path = require("path");
 const app = express();
 const mysql = require("mysql");
 const session = require("express-session");
 const cors = require("cors");
-
 const passport = require("passport");
+require("./midddleware/passportConfig")(passport);
 const GoogleStrategy = require("passport-google-oauth20").Strategy;
+require("dotenv").config();
 
 // const connection = mysql.createConnection({
 //   host: "localhost",
@@ -26,43 +28,16 @@ app.use(
     saveUninitialized: false,
   })
 );
-
-passport.use(
-  new GoogleStrategy(
-    {
-      clientID: process.env.GOOGLE_CLIENT_ID,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: "/auth/google/callback",
-    },
-    (accessToken, refreshToken, profile, done) => {
-      const user = {
-        googleId: profile.id,
-        displayName: profile.displayName,
-      };
-      done(null, user);
-    }
-  )
-);
-
 app.use(passport.initialize());
 app.use(passport.session());
 app.use(cors());
 app.use(express.json());
 
-passport.serializeUser((user, done) => {
-  done(null, user.googleId);
-});
+// // require database connection
+// const dbConnect = require("./db/dbConnect");
 
-passport.deserializeUser((id, done) => {
-  connection.query(
-    "SELECT * FROM users WHERE googleId = ?",
-    [id],
-    (err, user) => {
-      if (err) throw err;
-      done(null, user);
-    }
-  );
-});
+// // execute database connection
+// dbConnect();
 
 let notes = [
   {
@@ -135,67 +110,6 @@ app.get("/api/notes/:id", (request, response) => {
   } else {
     response.status(404).end();
   }
-});
-
-app.get(
-  "/auth/google",
-  passport.authenticate("google", { scope: ["profile"] })
-);
-
-app.get(
-  "/auth/google/callback",
-  passport.authenticate("google", { failureRedirect: "/login" }),
-  (req, res) => {
-    res.redirect("/");
-  }
-);
-
-app.get("/api/book", (req, res) => {
-  res.send({ book });
-});
-
-app.get("/api/book/chapters", (req, res) => {
-  // res.send({ chapters: book.chapters });
-  connection.query("SELECT * FROM chapters", (err, chapters) => {
-    if (err) throw err;
-    res.json(chapters);
-  });
-});
-
-app.get("/api/book/chapters/:chapterId", (req, res) => {
-  const chapterId = req.params.chapterId;
-  const chapter = book.chapters[chapterId];
-  if (!chapter) {
-    res.status(404).send({ error: "Chapter not found." });
-    return;
-  }
-  res.send({ chapter });
-});
-
-app.get("/api/book/characters", (req, res) => {
-  // res.send({ characters: book.characters });
-  connection.query("SELECT * FROM characters", (err, characters) => {
-    if (err) throw err;
-    res.json(characters);
-  });
-});
-
-app.get("/api/book/characters/:characterId", (req, res) => {
-  // const characterId = req.params.characterId;
-  // const character = book.characters[characterId];
-  // if (!character) {
-  //   res.status(404).send({ error: "Character not found." });
-  //   return;
-  // }
-  // res.send({ character });
-  connection.query(
-    "SELECT * FROM character_stats WHERE characterId = ?",
-    [req.params.id],
-    (err, characterStats) => {
-      if (err) throw err;
-      res.json(characterStats);
-    }
-  );
 });
 
 const PORT = 3001;
