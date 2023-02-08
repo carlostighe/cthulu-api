@@ -2,6 +2,7 @@ const express = require("express");
 const app = express();
 const mysql = require("mysql");
 const session = require("express-session");
+const cors = require("cors");
 
 const passport = require("passport");
 const GoogleStrategy = require("passport-google-oauth20").Strategy;
@@ -29,9 +30,9 @@ app.use(
 passport.use(
   new GoogleStrategy(
     {
-      clientID: "your-google-client-id",
-      clientSecret: "your-google-client-secret",
-      callbackURL: "http://localhost:3000/auth/google/callback",
+      clientID: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      callbackURL: "/auth/google/callback",
     },
     (accessToken, refreshToken, profile, done) => {
       const user = {
@@ -42,6 +43,11 @@ passport.use(
     }
   )
 );
+
+app.use(passport.initialize());
+app.use(passport.session());
+app.use(cors());
+app.use(express.json());
 
 passport.serializeUser((user, done) => {
   done(null, user.googleId);
@@ -78,10 +84,6 @@ let notes = [
     important: true,
   },
 ];
-
-app.use(passport.initialize());
-app.use(passport.session());
-app.use(express.json());
 
 app.get("/", (req, res) => {
   res.send("<h1>Hello World!</h1>");
@@ -148,21 +150,44 @@ app.get(
   }
 );
 
-app.get("/api/chapters", (req, res) => {
+app.get("/api/book", (req, res) => {
+  res.send({ book });
+});
+
+app.get("/api/book/chapters", (req, res) => {
+  // res.send({ chapters: book.chapters });
   connection.query("SELECT * FROM chapters", (err, chapters) => {
     if (err) throw err;
     res.json(chapters);
   });
 });
 
-app.get("/api/characters", (req, res) => {
+app.get("/api/book/chapters/:chapterId", (req, res) => {
+  const chapterId = req.params.chapterId;
+  const chapter = book.chapters[chapterId];
+  if (!chapter) {
+    res.status(404).send({ error: "Chapter not found." });
+    return;
+  }
+  res.send({ chapter });
+});
+
+app.get("/api/book/characters", (req, res) => {
+  // res.send({ characters: book.characters });
   connection.query("SELECT * FROM characters", (err, characters) => {
     if (err) throw err;
     res.json(characters);
   });
 });
 
-app.get("/api/characters/:id", (req, res) => {
+app.get("/api/book/characters/:characterId", (req, res) => {
+  // const characterId = req.params.characterId;
+  // const character = book.characters[characterId];
+  // if (!character) {
+  //   res.status(404).send({ error: "Character not found." });
+  //   return;
+  // }
+  // res.send({ character });
   connection.query(
     "SELECT * FROM character_stats WHERE characterId = ?",
     [req.params.id],
